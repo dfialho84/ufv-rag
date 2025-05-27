@@ -1,0 +1,54 @@
+version: "3"
+
+tasks:
+    up:
+        desc: "Start the Docker Compose services"
+        dir: "{{.USER_WORKING_DIR}}"
+        preconditions:
+            - test -f docker-compose.yaml
+        cmds:
+            - docker-compose up -d
+    down:
+        desc: "Stop the Docker Compose services"
+        dir: "{{.USER_WORKING_DIR}}"
+        preconditions:
+            - test -f docker-compose.yaml
+        cmds:
+            - docker-compose down
+    kafka:list-topics:
+        desc: "Create a Kafka topic"
+        dir: "{{.USER_WORKING_DIR}}"
+        cmds:
+            - docker exec -it kafka kafka-topics.sh --bootstrap-server localhost:9092 --list
+    kafka:create-topic:
+        desc: "Create a Kafka topic (usage: task kafka:create-topic name=topic-name)"
+        dir: "{{.USER_WORKING_DIR}}"
+        requires:
+            vars: [name]
+        cmds:
+            - docker exec -it kafka kafka-topics.sh --bootstrap-server localhost:9092 --create --topic {{.name}} --partitions 1 --replication-factor 1
+    kafka:produce-message:
+        desc: "Send a message to a Kafka topic (usage: task kafka:produce-message topic='name' mensagem='text')"
+        requires:
+            vars: [topic, message]
+        cmds:
+            - |
+                echo "{{.message}}" | docker exec -i kafka kafka-console-producer.sh --bootstrap-server localhost:9092 --topic {{.topic}}
+    kafka:consume:
+        desc: "Consumes messages on a Kafka topic (usage: task kafka:consume-one topic=name)"
+        requires:
+            vars: [topic]
+        cmds:
+            - docker exec -it kafka kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic {{.topic}} --from-beginning
+    kafka:consume-group:
+        desc: "Conusmes messages with a consumer gorups (usage: task kafka:consume-group topic=topic group=group)"
+        requires:
+            vars: [topic, group]
+        cmds:
+            - docker exec -it kafka kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic {{.topic}} --group {{.group}} --from-beginning
+    kafka:delete-topic:
+        desc: "Delete a Kafka topic (usage: task kafka:delete-topic topic=topic-name)"
+        requires:
+            vars: [topic]
+        cmds:
+            - docker exec -it kafka kafka-topics.sh --bootstrap-server localhost:9092 --delete --topic {{.topic}}
