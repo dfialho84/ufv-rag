@@ -1,3 +1,3 @@
-from .messenger_config import get_urls_producer
+from .messenger_config import create_urls_producer, create_urls_consumer
 
-__all__ = ["get_urls_producer"]
+__all__ = ["create_urls_producer", "create_urls_consumer"]

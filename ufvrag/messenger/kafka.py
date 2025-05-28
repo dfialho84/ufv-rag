@@ -78,8 +78,7 @@ class KafkaConsumer(Consumer[T]):
         if msg is None:
             return None
         if msg.error:
-            if msg.error.code() == KafkaMessage._PARTITION_EOF:
-                return None
+            return None
         return self.message_parser.parse(msg.value().decode("utf-8"))
 
     def close(self) -> None:
