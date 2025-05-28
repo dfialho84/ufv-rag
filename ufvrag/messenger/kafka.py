@@ -1,6 +1,10 @@
 from types import TracebackType
 from typing import TypeVar, Optional, Type
-from confluent_kafka import Producer as KafkaProducerLib, Consumer as KafkaConsumerLib
+from confluent_kafka import (
+    Producer as KafkaProducerLib,
+    Consumer as KafkaConsumerLib,
+    Message as KafkaMessage,
+)
 from .base import Producer, MessageParser, ProducerCallback, Consumer
 
 T = TypeVar("T")
@@ -48,8 +52,17 @@ class KafkaConsumer(Consumer[T]):
 
     message_parser: MessageParser[T]
     topic: str
-    groups_id: str
     consumer: KafkaConsumerLib
+
+    def __init__(
+        self,
+        message_parser: MessageParser[T],
+        topic: str,
+        consumer: KafkaConsumerLib,
+    ) -> None:
+        self.message_parser = message_parser
+        self.topic = topic
+        self.consumer = consumer
 
     def consume(self, timeout_sec: int) -> Optional[T]:
         """
@@ -61,18 +74,25 @@ class KafkaConsumer(Consumer[T]):
         Returns:
             Optional[T]: The consumed message, or None if no message was available within the timeout.
         """
-        pass
+        msg: KafkaMessage = self.consumer.poll(timeout_sec)
+        if msg is None:
+            return None
+        if msg.error:
+            if msg.error.code() == KafkaMessage._PARTITION_EOF:
+                return None
+        return self.message_parser.parse(msg.value().decode("utf-8"))
 
     def close(self) -> None:
         """
         Close the consumer, releasing any resources.
         """
-        ...
+        self.consumer.close()
 
     def __enter__(self) -> "KafkaConsumer[T]":
         """
         Enter the context manager, returning the consumer instance.
         """
+        self.consumer.subscribe([self.topic])
         return self
 
     def __exit__(
@@ -92,4 +112,7 @@ class KafkaConsumer(Consumer[T]):
         Returns:
             Optional[bool]: Whether to suppress the exception.
         """
-        pass
+        self.close()
+        if exc_value:
+            return False
+        return True
