@@ -61,8 +61,15 @@ tasks:
             vars: [topic]
         cmds:
             - docker exec -it kafka kafka-topics.sh --bootstrap-server localhost:9092 --delete --topic {{.topic}}
+    docs:quickstart:
+        desc: "Generate quickstart documentation for the project"
+        dir: "{{.USER_WORKING_DIR}}"
+        cmds:
+            - sphinx-quickstart docs
     docs:generate:
         desc: "Generate documentation for the project"
         dir: "{{.USER_WORKING_DIR}}/docs"
         cmds:
             - sphinx-apidoc -o source/ ../ufvrag
+            - echo "\n   modules.rst" >> source/index.rst
+            - make html
