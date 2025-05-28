@@ -1,12 +1,13 @@
 from typing import Protocol, TypeVar, Generic
 
-T = TypeVar('T')
+T = TypeVar("T")
 
 
 class MessageParser(Protocol, Generic[T]):
     """
     A protocol for message parsers that can parse a message from a string.
     """
+
     def parse(self, message: str) -> T:
         """
         Parse a message from a string.
@@ -32,7 +33,8 @@ class MessageParser(Protocol, Generic[T]):
         ...
 
 
-U = TypeVar('U', contravariant=True)
+U = TypeVar("U", contravariant=True)
+
 
 class Producer(Protocol, Generic[U]):
     """
@@ -53,4 +55,3 @@ class Producer(Protocol, Generic[U]):
         Flush the producer, ensuring all messages are sent.
         """
         ...
-

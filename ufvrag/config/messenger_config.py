@@ -6,6 +6,7 @@ from ufvrag.messenger.parsers import UrlParser
 
 load_dotenv()
 
+
 def get_urls_producer() -> KafkaProducer[str]:
     """
     Get a Kafka producer for URLs.
@@ -17,11 +18,13 @@ def get_urls_producer() -> KafkaProducer[str]:
     conf = {
         "bootstrap.servers": os.getenv("KAFKA_BOOTSTRAP_SERVERS"),
     }
-    
+
     kafka_producer = KafkaProducerLib(conf)
     url_parser = UrlParser()
     topic = os.getenv("KAFKA_URLS_TOPIC")
     if not topic:
         raise ValueError("KAFKA_URLS_TOPIC environment variable is not set.")
-    
-    return KafkaProducer[str](message_parser=url_parser, topic=topic, producer=kafka_producer)
+
+    return KafkaProducer[str](
+        message_parser=url_parser, topic=topic, producer=kafka_producer
+    )

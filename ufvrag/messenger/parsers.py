@@ -1,5 +1,6 @@
 from .base import MessageParser
 
+
 class UrlParser(MessageParser[str]):
     """
     A class to parse URLs.
