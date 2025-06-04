@@ -77,7 +77,7 @@ class KafkaConsumer(Consumer[T]):
         msg: KafkaMessage = self.consumer.poll(timeout_sec)
         if msg is None:
             return None
-        if msg.error:
+        if msg.error():
             return None
         return self.message_parser.parse(msg.value().decode("utf-8"))
 

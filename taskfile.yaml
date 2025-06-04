@@ -26,9 +26,9 @@ tasks:
         vars:
             partitions: '{{.partitions | default "1"}}'
         requires:
-            vars: [name]
+            vars: [topic]
         cmds:
-            - docker exec -it kafka kafka-topics.sh --bootstrap-server localhost:9092 --create --topic {{.name}} --partitions {{.partitions}} --replication-factor 1
+            - docker exec -it kafka kafka-topics.sh --bootstrap-server localhost:9092 --create --topic {{.topic}} --partitions {{.partitions}} --replication-factor 1 --config retention.ms=86400000 --config retention.bytes=1073741824
     kafka:produce-message:
         desc: "Send a message to a Kafka topic (usage: task kafka:produce-message topic='name' mensagem='text')"
         requires:
@@ -61,6 +61,15 @@ tasks:
             vars: [topic]
         cmds:
             - docker exec -it kafka kafka-topics.sh --bootstrap-server localhost:9092 --delete --topic {{.topic}}
+    kafka:recreate-topic:
+        desc: "Recreatee a Kafka topic (usage: task kafka:recreate-topic topic=topic-name)"
+        vars:
+            partitions: '{{.partitions | default "1"}}'
+        requires:
+            vars: [topic]
+        cmds:
+            - task kafka:delete-topic topic={{.topic}}
+            - task kafka:create-topic topic={{.topic}} partitions={{.partitions}}
     docs:quickstart:
         desc: "Generate quickstart documentation for the project"
         dir: "{{.USER_WORKING_DIR}}"
@@ -73,3 +82,47 @@ tasks:
             - sphinx-apidoc -o source/ ../ufvrag
             - echo "\n   modules.rst" >> source/index.rst
             - make html
+    rag:seeder:
+        desc: "Start seeding"
+        dir: "{{.USER_WORKING_DIR}}"
+        cmds:
+            - python -m ufvrag.seeder --url https://www.ufv.br
+    rag:builder:
+        desc: "Start seeding"
+        dir: "{{.USER_WORKING_DIR}}"
+        cmds:
+            - python -m ufvrag.rag.builder
+    qdrant:search:
+        desc: "Search vector in Qdrant"
+        cmds:
+            - |
+                curl -X POST http://localhost:6333/collections/ufvrag/points/search \
+                -H 'Content-Type: application/json' \
+                -d '{"limit": 10}'
+    qdrant:count:
+        desc: "Count"
+        cmds:
+            - curl -s http://localhost:6333/collections/ufvrag
+    qdrant:clear:
+        desc: "Clear"
+        cmds:
+            - |
+                curl -X POST http://localhost:6333/collections/ufvrag/points/delete \
+                -H "Content-Type: application/json" \
+                -d '{ "filter": { "must": [] } }'
+    qdrant:create:
+        desc: "Create"
+        cmds:
+            - |
+                curl -X PUT http://localhost:6333/collections/ufvrag \
+                -H "Content-Type: application/json" \
+                -d '{
+                    "vectors": {
+                        "size": 384,
+                        "distance": "Cosine"
+                    }
+                }'
+    qdrant:delete:
+        desc: "Delete"
+        cmds:
+            - curl -X DELETE http://localhost:6333/collections/ufvrag

@@ -29,17 +29,43 @@ def create_urls_producer() -> KafkaProducer[str]:
         message_parser=url_parser, topic=topic, producer=kafka_producer
     )
 
+
 def create_urls_consumer() -> KafkaConsumer[str]:
     """
     Get a Kafka consumer for URLs.
 
     Returns:
-        KafkaProducer[str]: A Kafka consumer configured for URLs.
+        KafkaConsumer[str]: A Kafka consumer configured for URLs.
     """
 
     conf = {
         "bootstrap.servers": os.getenv("KAFKA_BOOTSTRAP_SERVERS"),
         "group.id": os.getenv("KAFKA_GROUP_ID", "default_group"),
+        "auto.offset.reset": "beginning",
+    }
+
+    kafka_consumer = KafkaConsumerLib(conf)
+    url_parser = UrlParser()
+    topic = os.getenv("KAFKA_URLS_TOPIC")
+    if not topic:
+        raise ValueError("KAFKA_URLS_TOPIC environment variable is not set.")
+
+    return KafkaConsumer[str](
+        message_parser=url_parser, topic=topic, consumer=kafka_consumer
+    )
+
+
+def create_rag_consumer() -> KafkaConsumer[str]:
+    """
+    Get a Kafka consumer for URLs.
+
+    Returns:
+        KafkaConsumer[str]: A Kafka consumer configured for URLs.
+    """
+
+    conf = {
+        "bootstrap.servers": os.getenv("KAFKA_BOOTSTRAP_SERVERS"),
+        "group.id": os.getenv("KAFKA_RAG_GROUP_ID", "default_group"),
         "auto.offset.reset": "beginning",
     }
 
