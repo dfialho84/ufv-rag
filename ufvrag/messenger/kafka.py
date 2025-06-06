@@ -1,3 +1,4 @@
+import time
 from types import TracebackType
 from typing import TypeVar, Optional, Type
 from confluent_kafka import (
@@ -35,7 +36,16 @@ class KafkaProducer(Producer[T]):
             message (str): The message to produce.
         """
         str_msg: str = self.message_parser.serialize(message)
-        self.producer.produce(topic=self.topic, value=str_msg, callback=callback)
+        while True:
+            try:
+                print(f"Producing: {str_msg}")
+                self.producer.produce(
+                    topic=self.topic, value=str_msg, callback=callback
+                )
+                break
+            except Exception as e:
+                print(e)
+                time.sleep(2)
 
     def flush(self) -> None:
         """

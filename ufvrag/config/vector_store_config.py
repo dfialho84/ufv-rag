@@ -22,9 +22,11 @@ def create_vector_store() -> VectorStore:
     """
     client = create_client()
     embeddings = create_embeddings()  # Create embeddings instance
+    print("===============================")
+    print(os.getenv("QDRANT_COLLECTION_NAME", "xxxxx"))
     vector_store = QdrantVectorStore(
         client=client,
-        collection_name=os.getenv("QDRANT_COLLECTION_NAME", "ufvrag"),
+        collection_name=os.getenv("QDRANT_COLLECTION_NAME", "xxxxx"),
         embedding=embeddings,
     )
     return vector_store

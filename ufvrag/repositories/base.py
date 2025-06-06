@@ -1,4 +1,4 @@
-from typing import Protocol, Optional
+from typing import Protocol, Optional, Iterable, Any
 
 from ufvrag.models import Url
 
@@ -13,6 +13,27 @@ class UrlRepository(Protocol):
 
         Returns:
             Optional[Url]: The Url object if it exists, None otherwise.
+        """
+        ...
+
+    def find_by_digest(self, digest: str) -> Optional[Url]:
+        """
+        Check if a URL with the specified digest exists in the repository.
+
+        Args:
+            digest (str): The digest to check.
+
+        Returns:
+            Optional[Url]: The Url object if it exists, None otherwise.
+        """
+        ...
+
+    def get_urls_list(self, **kwargs: Any) -> Iterable[Url]:
+        """
+        Get the list of URLs according to kwargs filter
+
+        Args:
+            kwargs (): dict of filters
         """
         ...
 

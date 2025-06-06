@@ -1,6 +1,21 @@
+from typing import Optional, Any, Iterable, Mapping, TypeGuard
+from dataclasses import asdict
 from ufvrag.models import Url
 from .base import UrlRepository
 from pymongo.collection import Collection
+
+
+def dict_to_url(d: Optional[Mapping[str, Any]]) -> Optional[Url]:
+    if d is not None:
+        return Url(**{k: v for k, v in d.items() if k != "_id"})
+    return None
+
+
+def iterable_dict_to_url(urls: Iterable[Mapping[str, Any]]) -> Iterable[Url]:
+    def filter_not_none(url: Optional[Url]) -> TypeGuard[Url]:
+        return isinstance(url, Url)
+
+    return filter(filter_not_none, map(dict_to_url, urls))
 
 
 class MongoUrlRepository(UrlRepository):
@@ -9,10 +24,10 @@ class MongoUrlRepository(UrlRepository):
     This class provides methods to interact with a MongoDB collection for URL storage.
     """
 
-    def __init__(self, collection: Collection[Url]) -> None:
+    def __init__(self, collection: Collection[Mapping[str, Any]]) -> None:
         self.collection = collection
 
-    def find_by_url(self, url: str) -> Url | None:
+    def find_by_url(self, url: str) -> Optional[Url]:
         """
         Check if a URL exists in the MongoDB collection.
 
@@ -22,7 +37,29 @@ class MongoUrlRepository(UrlRepository):
         Returns:
             Optional[Url]: The Url object if it exists, None otherwise.
         """
-        return self.collection.find_one({"url": url})
+        return dict_to_url(self.collection.find_one({"url": url}))
+
+    def find_by_digest(self, digest: str) -> Optional[Url]:
+        """
+        Check if a URL with the specified digest exists in the repository.
+
+        Args:
+            digest (str): The digest to check.
+
+        Returns:
+            Optional[Url]: The Url object if it exists, None otherwise.
+        """
+        return dict_to_url(self.collection.find_one({"digest": digest}))
+
+    def get_urls_list(self, **kwargs: Any) -> Iterable[Url]:
+        """
+        Get the list of URLs according to kwargs filter
+
+        Args:
+            kwargs (): dict of filters
+        """
+        print(kwargs)
+        return iterable_dict_to_url(self.collection.find(kwargs))
 
     def insert(self, url: Url) -> bool:
         """
@@ -34,9 +71,9 @@ class MongoUrlRepository(UrlRepository):
         Returns:
             bool: True if the URL was inserted successfully, False otherwise.
         """
-        if self.find_by_url(url["url"]) is not None:
+        if self.find_by_url(url.url) is not None:
             return False
-        result = self.collection.insert_one(url)
+        result = self.collection.insert_one(asdict(url))
         return result.acknowledged
 
     def update(self, url: Url) -> bool:
@@ -49,5 +86,5 @@ class MongoUrlRepository(UrlRepository):
         Returns:
             bool: True if the URL was updated successfully, False otherwise.
         """
-        result = self.collection.update_one({"url": url["url"]}, {"$set": url})
+        result = self.collection.update_one({"url": url.url}, {"$set": asdict(url)})
         return result.modified_count > 0

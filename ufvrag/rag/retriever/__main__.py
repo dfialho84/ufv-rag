@@ -10,6 +10,7 @@ from ufvrag.config.vector_store_config import create_vector_store
 def trim_blank_lines(text: str) -> str:
     return re.sub(r"\n{2,}", "\n", text.strip())
 
+
 def print_docs(docs: list[Document]) -> None:
     for doc in docs:
         print(20 * "=")
@@ -69,7 +70,6 @@ prompt_template = PromptTemplate.from_template(rag_template)
 rag_chain = prompt_template | llm | StrOutputParser()
 
 
-
 if __name__ == "__main__":
     query = "Você pode me falar sobre o cluster que a DTI possui? Preciso estar vinculado a algum projeto de pesquisa para usar o cluster?"
     # query = input('Faça uma pergunta:\n')
@@ -90,12 +90,11 @@ if __name__ == "__main__":
     retrieved_docs = vector_store.similarity_search(query)
     # retrieved_docs = retriever.invoke(query)
     print_docs(retrieved_docs)
-    
 
     context = "\n\n".join(trim_blank_lines(doc.page_content) for doc in retrieved_docs)
     # print(context)
     rag_response = rag_chain.invoke(input={"question": query, "context": context})
     print(query)
-    
-    print('---------')
+
+    print("---------")
     print(rag_response)

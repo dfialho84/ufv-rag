@@ -85,8 +85,17 @@ tasks:
     rag:seeder:
         desc: "Start seeding"
         dir: "{{.USER_WORKING_DIR}}"
+        requires:
+            vars: [url]
+        vars:
+            url: '{{.url | default "https://www.ufv.br" }}'
         cmds:
-            - python -m ufvrag.seeder --url https://www.ufv.br
+            - python -m ufvrag.seeder --url {{.url}}
+    rag:crawl:
+        desc: "Crawl"
+        dir: "{{.USER_WORKING_DIR}}"
+        cmds:
+            - python -m ufvrag.webcrawler
     rag:builder:
         desc: "Start seeding"
         dir: "{{.USER_WORKING_DIR}}"
@@ -94,35 +103,49 @@ tasks:
             - python -m ufvrag.rag.builder
     qdrant:search:
         desc: "Search vector in Qdrant"
+        vars:
+            size: '{{.size | default "10" }}'
+        requires:
+            vars: [collection]
         cmds:
             - |
-                curl -X POST http://localhost:6333/collections/ufvrag/points/search \
+                curl -X POST http://localhost:6333/collections/{{.collection}}/points/search \
                 -H 'Content-Type: application/json' \
-                -d '{"limit": 10}'
+                -d '{"limit": {{.size}} }'
     qdrant:count:
         desc: "Count"
+        requires:
+            vars: [collection]
         cmds:
-            - curl -s http://localhost:6333/collections/ufvrag
+            - curl -s http://localhost:6333/collections/{{.collection}}
     qdrant:clear:
         desc: "Clear"
+        requires:
+            vars: [collection]
         cmds:
             - |
-                curl -X POST http://localhost:6333/collections/ufvrag/points/delete \
+                curl -X POST http://localhost:6333/collections/{{.collection}}/points/delete \
                 -H "Content-Type: application/json" \
                 -d '{ "filter": { "must": [] } }'
     qdrant:create:
         desc: "Create"
+        vars:
+            size: '{{.size | default "4096"}}'
+        requires:
+            vars: [name]
         cmds:
             - |
-                curl -X PUT http://localhost:6333/collections/ufvrag \
+                curl -X PUT http://localhost:6333/collections/{{.name}} \
                 -H "Content-Type: application/json" \
                 -d '{
                     "vectors": {
-                        "size": 384,
+                        "size": {{.size}},
                         "distance": "Cosine"
                     }
                 }'
     qdrant:delete:
         desc: "Delete"
+        requires:
+            vars: [collection]
         cmds:
-            - curl -X DELETE http://localhost:6333/collections/ufvrag
+            - curl -X DELETE http://localhost:6333/collections/{{.collection}}

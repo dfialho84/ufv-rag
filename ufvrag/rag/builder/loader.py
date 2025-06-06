@@ -1,14 +1,19 @@
+import re
 import requests
 import tempfile
-from bs4.filter import SoupStrainer
+
 from langchain_core.documents import Document
 from langchain_community.document_loaders import WebBaseLoader, PyPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from ufvrag.config.messenger_config import create_rag_consumer
-from ufvrag.config.vector_store_config import create_vector_store
 
+from ufvrag.config.vector_store_config import create_vector_store
+from ufvrag.config.repository_config import url_repository
+from ufvrag.models import Url
+from ufvrag.utils.interrupt import safe_interrupt_loop, ShouldStopFn
+from ufvrag.config.messenger_config import create_embeddings_consumer
+
+consumer = create_embeddings_consumer()
 vector_store = create_vector_store()
-bs4_strainer = SoupStrainer(class_=("post-title", "post-header", "post-content"))
 
 
 def load_html(url: str) -> list[Document]:
@@ -18,7 +23,6 @@ def load_html(url: str) -> list[Document]:
     print(f"Loading HTML from {url}...")
     loader = WebBaseLoader(
         web_paths=(url,),
-        # bs_kwargs={"parse_only": bs4_strainer},
     )
     return loader.load()
 
@@ -36,16 +40,25 @@ def load_pdf(url: str) -> list[Document]:
     return loader.load()
 
 
-def load_document(url: str) -> None:
+def trim_blank_lines(text: str) -> str:
+    return re.sub(r"\n{2,}", "\n", text.strip())
+
+
+def trim_document(doc: Document) -> Document:
+    doc.page_content = trim_blank_lines(doc.page_content)
+    return doc
+
+
+def load_document(url: Url) -> bool:
     """
     Load a document from the configured source and process it.
     """
     try:
-        if url.lower().endswith(".pdf"):
-            docs = load_pdf(url)
+        if url.url.lower().endswith(".pdf"):
+            docs = load_pdf(url.url)
         else:
-            docs = load_html(url)
-        print(f"Loaded {len(docs)} documents from {url}.")
+            docs = load_html(url.url)
+        print(f"Loaded {len(docs)} documents from {url.url}.")
         print(f"Total characters: {len(docs[0].page_content)}")
         # print(docs[0].page_content[:100])
         text_splitter = RecursiveCharacterTextSplitter(
@@ -53,27 +66,36 @@ def load_document(url: str) -> None:
             chunk_overlap=200,  # chunk overlap (characters)
             add_start_index=True,  # track index in original document
         )
-        all_splits = text_splitter.split_documents(docs)
+        all_splits = list(map(trim_document, text_splitter.split_documents(docs)))
         print(f"Split into {len(all_splits)} chunks.")
         document_ids = vector_store.add_documents(all_splits)
         print(f"Added {len(document_ids)} documents to the vector store.")
+        return True
     except:
         print(
             f"Failed to load document from {url}. Please check the URL or the document format."
         )
+        return False
 
 
-def load_urls() -> None:
-    consumer = create_rag_consumer()
+@safe_interrupt_loop # type: ignore
+def load_urls(should_stop: ShouldStopFn) -> None:
     with consumer as consumer_instance:
-        try:
-            while True:
-                msg = consumer_instance.consume(10)
-                if msg:
-                    load_document(msg)
-                    print(f"Consumed message: {msg}")
-                else:
-                    print("No messages consumed.")
-        except KeyboardInterrupt:
-            pass
-    print(consumer)
+        while True:
+            msg = consumer_instance.consume(10)
+            if msg:
+                url = url_repository.find_by_url(url=msg)
+                if url is None:
+                    continue
+                loaded = load_document(url)
+                if loaded:
+                    url.loaded = True
+                    url_repository.update(url)
+                print(f"Consumed me ssage: {msg}")
+            else:
+                print("No messages consumed.")  
+            
+            if should_stop():
+                print("Loop interrupted")
+                break
+    return
