@@ -38,7 +38,7 @@ class KafkaProducer(Producer[T]):
         str_msg: str = self.message_parser.serialize(message)
         while True:
             try:
-                print(f"Producing: {str_msg}")
+                # print(f"Producing: {str_msg}")
                 self.producer.produce(
                     topic=self.topic, value=str_msg, callback=callback
                 )

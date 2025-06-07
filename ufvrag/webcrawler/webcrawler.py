@@ -140,14 +140,18 @@ def look_for_links(url: str, content: str) -> list[str]:
                 continue
             href = a_tag.get("href")
             if not isinstance(href, str):
-                continue
+                continue            
             link: str = urljoin(url, href)
+            if not link.startswith('http'):
+                continue
             if not belong_to_domain(link, ".ufv.br") and not belong_to_domain(
                 link, "drive.ufv.br"
             ):
-                print(f"URL {link} does not belong to ufv.br, skipping.")
+                print(f"\tURL {link} does not belong to ufv.br, skipping.")
                 continue
             if link == url:
+                continue
+            if url_repository.find_by_url(link) is not None:
                 continue
             links.append(link)
         return links
@@ -158,6 +162,9 @@ def look_for_links(url: str, content: str) -> list[str]:
 
 def craw_url(url: str) -> CrawlResponse:
     print(f"Crawling URL: {url}")
+    if url_repository.find_by_url(url) is not None:
+        print(f"\tULR {url} already in database. Skipping")
+        return CrawlResponse()
     try:
         url_for_emebedding: Optional[str] = None
 
@@ -174,18 +181,24 @@ def craw_url(url: str) -> CrawlResponse:
         )
 
         if is_in_db(url=url_object):
-            print(f"Url {url} is already in Database")
+            print(f"\tUrl {url} is already in Database")
+            if url_repository.find_by_url(url) is None:
+                url_object.loaded = True
+                url_repository.insert(url=url_object)
         else:
-            print(f"Saving URL {url} in database")
+            print(f"\tSaving URL {url} in database")
             url_repository.insert(url=url_object)
             url_for_emebedding = url
 
         if not is_html_like(content_type=content_type):
-            print(f"URL {url} is not HTML-like, skipping.")
-            return CrawlResponse(url_for_embbeding=url_for_emebedding)
+            print(f"\t *** URL {url} is not HTML-like, skipping. ***")
+            if should_be_embedded(url_object):
+                return CrawlResponse(url_for_embbeding=url_for_emebedding)
+            else:
+                return CrawlResponse()
 
         links = look_for_links(url=url, content=response.text)
         return CrawlResponse(url_for_embbeding=url_for_emebedding, links=links)
     except requests.RequestException as e:
-        print(f"Erro ao acessar {url}: {e}")
+        print(f"\tErro ao acessar {url}: {e}")
         return CrawlResponse()

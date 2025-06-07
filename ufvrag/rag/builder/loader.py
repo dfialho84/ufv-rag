@@ -1,6 +1,7 @@
 import re
 import requests
 import tempfile
+import trafilatura
 
 from langchain_core.documents import Document
 from langchain_community.document_loaders import WebBaseLoader, PyPDFLoader
@@ -21,10 +22,20 @@ def load_html(url: str) -> list[Document]:
     Load HTML content into the vector store.
     """
     print(f"Loading HTML from {url}...")
-    loader = WebBaseLoader(
-        web_paths=(url,),
+    # loader = WebBaseLoader(
+    #     web_paths=(url,),
+    # )
+    # return loader.load()
+    downloaded = trafilatura.fetch_url(url)
+    text = trafilatura.extract(
+        downloaded,
+        include_formatting=True,
+        include_links=False,   # opcional
+        include_comments=False # opcional
     )
-    return loader.load()
+    if text is None:
+        return []
+    return [Document(page_content=text, metadata={"source": url})]
 
 
 def load_pdf(url: str) -> list[Document]:
