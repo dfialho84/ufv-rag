@@ -1,4 +1,4 @@
-from typing import Protocol, Optional, Iterable, Any
+from typing import Any, Iterable, Optional, Protocol
 
 from ufvrag.models import Url
 

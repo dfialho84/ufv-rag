@@ -1,6 +1,6 @@
-from langchain.agents import create_react_agent, Tool, AgentExecutor, tool
-from langchain_ollama import ChatOllama
 from langchain import hub
+from langchain.agents import AgentExecutor, Tool, create_react_agent, tool
+from langchain_ollama import ChatOllama
 
 llm = ChatOllama(model="llama3:latest", temperature=0)
 

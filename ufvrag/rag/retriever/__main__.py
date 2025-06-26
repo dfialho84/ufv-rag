@@ -1,100 +1,57 @@
-import re
-from pydantic import BaseModel, Field
-from langchain_core.documents import Document
-from langchain_ollama import ChatOllama
-from langchain.prompts import PromptTemplate
-from langchain_core.output_parsers import StrOutputParser
-from ufvrag.config.vector_store_config import create_vector_store
+from .chains import (decomposition_generator_chain, decomposition_rag_chain,
+                     fusion_chain, fusion_decomposition_chain,
+                     fusion_rag_chain, multiquery_chain, rag_chain,
+                     retrieval_chain)
 
 
-def trim_blank_lines(text: str) -> str:
-    return re.sub(r"\n{2,}", "\n", text.strip())
-
-
-def print_docs(docs: list[Document]) -> None:
-    for doc in docs:
-        print(20 * "=")
-        titulo = doc.metadata["title"]
-        source = doc.metadata["source"]
-        conteudo = trim_blank_lines(doc.page_content)
-        print(f"Título: {titulo}")
-        print(f"Fonte: {source}")
-        # print(conteudo)
-        print(20 * "=")
-        # input("\nAperte qualquer tecla pra continuar.")
-
-
-class QuestionsList(BaseModel):
-    """Represents a list of questions"""
-
-    questions: list[str] = Field(description="The list of questions")
-
-
-template = """
-    Pegue a questão a seguir e a reformule de 6 formas diferentes de forma que ela tenha o mesmo significado.
-    Como sexto item, inclua a questão original.
-    questão: {question}
-"""
-
-prompt_template = PromptTemplate.from_template(template=template)
-llm = ChatOllama(model="llama3", temperature=0).with_structured_output(QuestionsList)
-
-reformulate_chain = prompt_template | llm
-
-
-# t = """
-#     Reflita sobre a questão a seguir. Caso você a considere complexa, quebre-a em pedaços, como um passo-a-passo.
-#     Então, depois de criar uma sequênsica de passos mais simples, tente responder a questão.
-#     A resposta deve conter o conjunto de passos e a reflexão sobre cada um deles. A resposta também deve conter a
-#     resposta final, claro!
-
-#     questão: {question}
-# """
-# pt = PromptTemplate.from_template(template=t)
-
-# task_division_chain = pt | llm | StrOutputParser()
-
-llm = ChatOllama(model="llama3", temperature=0)
-rag_template = """
-    Voce é um assistente que responde a perguntas. Sempre responda em Português.
-    Use os seguinte trechos de documentos presente no contexto
-    para responder as perguntas. Se atenha ao contexto para responder.
-    Se você não souber responder, diga que você não sabe.
-
-    contexto:
-    {context}
-
-    Pergunta: {question}
-    """
-prompt_template = PromptTemplate.from_template(rag_template)
-rag_chain = prompt_template | llm | StrOutputParser()
+def format_qa_pair(question: str, answer: str) -> str:
+    formatted_string = ""
+    formatted_string += f"Question: {question}\nAnswer: {answer}\n\n"
+    return formatted_string.strip()
 
 
 if __name__ == "__main__":
-    query = "Você pode me falar sobre o cluster que a DTI possui? Preciso estar vinculado a algum projeto de pesquisa para usar o cluster?"
+    # query = "Quem elaborou o PDTI (Plano Diretor de Tecnologia da Informação)?"
+    # query = "Quais são as metas de TI?"
+    query = "Quais as lições aprendidas na análise do PDTI anterior?"
+    # query = "Quais são as considerações finais em relação ao PDTI?"
+    # query = "o PDTI está alinhado a algum outro documento? Quais?"
+    # query = "Qual é vigência do PDTI 2024-2029?"
     # query = input('Faça uma pergunta:\n')
 
-    # response = task_division_chain.invoke(input={'question': query})
-    # print(response)
+    print("Query:", query)
 
-    response: QuestionsList = reformulate_chain.invoke(input={"question": query})  # type: ignore
-    # for q in enumerate(response.questions):
-    #     print(q)
+    queries = multiquery_chain.invoke({"question": query})
+    print("\n--- Generetaded Queries ---\n")
+    for q in queries.questions:
+        print(q)
 
-    vector_store = create_vector_store()
-    # retriever = vector_store.as_retriever(
-    #     search_type="mmr", search_kwargs={"k": 20, "lambda_mult": 0.7}
-    # )
-    questions = "\n".join(response.questions)
-    print(questions)
-    retrieved_docs = vector_store.similarity_search(query)
-    # retrieved_docs = retriever.invoke(query)
-    print_docs(retrieved_docs)
+    # d = fusion_chain.invoke({"question": query})
+    # for rd in d:
+    #     print(rd)
 
-    context = "\n\n".join(trim_blank_lines(doc.page_content) for doc in retrieved_docs)
-    # print(context)
-    rag_response = rag_chain.invoke(input={"question": query, "context": context})
-    print(query)
+    print("\n=== sub questions ===")
+    sub_questions = decomposition_generator_chain.invoke({"question": query})
+    for i, sub_question in enumerate(sub_questions, start=1):
+        print(f"{i}. {sub_question}")
 
+    print("\n === Generating sub-questions ===")
+    qa_pairs = ""
+    for q in sub_questions:
+        print(f"\n ---\nQuestion: {q}")
+        answer = decomposition_rag_chain.invoke({"question": q, "qa_pairs": qa_pairs})
+        print(f"Answer: {answer}")
+        qa_pair = format_qa_pair(q, answer)
+        qa_pairs = qa_pairs + "\n --- \n" + qa_pair
+
+    print("\n\n---------")
+    rag_response = rag_chain.invoke(input=query)
+    print("rag:", rag_response)
     print("---------")
-    print(rag_response)
+    fusion_response = fusion_rag_chain.invoke(input=query)
+    print("rag fusion:", fusion_response)
+    print("---------")
+    fd_response = fusion_decomposition_chain.invoke(
+        input={"question": query, "qa_pairs": qa_pairs}
+    )
+    print("rag decomposition:", fd_response)

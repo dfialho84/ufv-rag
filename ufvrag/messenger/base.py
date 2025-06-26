@@ -1,6 +1,6 @@
+from abc import ABC, abstractmethod
 from types import TracebackType
-from typing import TypeVar, Generic, Callable, Any, Optional, Type
-from abc import abstractmethod, ABC
+from typing import Any, Callable, Generic, Optional, Type, TypeVar
 
 T = TypeVar("T")
 

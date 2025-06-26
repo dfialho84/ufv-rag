@@ -1,13 +1,21 @@
-import requests
-from typing import Iterable, Optional
-from dataclasses import dataclass
-from bs4 import BeautifulSoup, Tag
-from datetime import datetime
-from urllib.parse import urljoin, urlparse
 import hashlib
+from dataclasses import dataclass
+from datetime import datetime
+from typing import Iterable, Optional
+from urllib.parse import urljoin, urlparse
+
+import requests
+from bs4 import BeautifulSoup, Tag
 
 from ufvrag.config.repository_config import url_repository
 from ufvrag.models import Url
+from typing import Final
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
+
+domains_to_crawl: list[str] = os.getenv("DOMAINS_TO_CRAWL", "").split(",")
 
 
 @dataclass
@@ -15,6 +23,8 @@ class CrawlResponse:
     url_for_embbeding: Optional[str] = None
     links: Optional[Iterable[str]] = None
 
+
+EMPTY_CRAWL_RESPONSE: Final[CrawlResponse] = CrawlResponse()
 
 # Tipos considerados "html-like"
 html_like_types = [
@@ -140,14 +150,13 @@ def look_for_links(url: str, content: str) -> list[str]:
                 continue
             href = a_tag.get("href")
             if not isinstance(href, str):
-                continue            
-            link: str = urljoin(url, href)
-            if not link.startswith('http'):
                 continue
-            if not belong_to_domain(link, ".ufv.br") and not belong_to_domain(
-                link, "drive.ufv.br"
-            ):
-                print(f"\tURL {link} does not belong to ufv.br, skipping.")
+            link: str = urljoin(url, href)
+            if not link.startswith("http"):
+                continue
+            belong = any(belong_to_domain(link, domain) for domain in domains_to_crawl)
+            if not belong:
+                print(f"\tURL {link} does not belong domains list, skipping.")
                 continue
             if link == url:
                 continue
@@ -160,11 +169,11 @@ def look_for_links(url: str, content: str) -> list[str]:
         return []
 
 
-def craw_url(url: str) -> CrawlResponse:
+def crawl_url(url: str) -> CrawlResponse:
     print(f"Crawling URL: {url}")
     if url_repository.find_by_url(url) is not None:
-        print(f"\tULR {url} already in database. Skipping")
-        return CrawlResponse()
+        print(f"\tURL {url} already in database. Skipping")
+        return EMPTY_CRAWL_RESPONSE
     try:
         url_for_emebedding: Optional[str] = None
 
@@ -195,10 +204,10 @@ def craw_url(url: str) -> CrawlResponse:
             if should_be_embedded(url_object):
                 return CrawlResponse(url_for_embbeding=url_for_emebedding)
             else:
-                return CrawlResponse()
+                return EMPTY_CRAWL_RESPONSE
 
         links = look_for_links(url=url, content=response.text)
         return CrawlResponse(url_for_embbeding=url_for_emebedding, links=links)
     except requests.RequestException as e:
         print(f"\tErro ao acessar {url}: {e}")
-        return CrawlResponse()
+        return EMPTY_CRAWL_RESPONSE

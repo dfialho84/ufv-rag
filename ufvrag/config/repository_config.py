@@ -1,10 +1,11 @@
 import os
 from typing import Any
-from pymongo import MongoClient
-from dotenv import load_dotenv
-from ufvrag.repositories.mongo import MongoUrlRepository
-from ufvrag.repositories.base import UrlRepository
 
+from dotenv import load_dotenv
+from pymongo import MongoClient
+
+from ufvrag.repositories.base import UrlRepository
+from ufvrag.repositories.mongo import MongoUrlRepository
 
 load_dotenv()
 

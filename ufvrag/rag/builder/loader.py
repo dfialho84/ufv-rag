@@ -1,17 +1,17 @@
 import re
-import requests
 import tempfile
-import trafilatura
 
+import requests
+import trafilatura
+from langchain_community.document_loaders import PyPDFLoader, WebBaseLoader
 from langchain_core.documents import Document
-from langchain_community.document_loaders import WebBaseLoader, PyPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
-from ufvrag.config.vector_store_config import create_vector_store
-from ufvrag.config.repository_config import url_repository
-from ufvrag.models import Url
-from ufvrag.utils.interrupt import safe_interrupt_loop, ShouldStopFn
 from ufvrag.config.messenger_config import create_embeddings_consumer
+from ufvrag.config.repository_config import url_repository
+from ufvrag.config.vector_store_config import create_vector_store
+from ufvrag.models import Url
+from ufvrag.utils.interrupt import ShouldStopFn, safe_interrupt_loop
 
 consumer = create_embeddings_consumer()
 vector_store = create_vector_store()
@@ -30,8 +30,8 @@ def load_html(url: str) -> list[Document]:
     text = trafilatura.extract(
         downloaded,
         include_formatting=True,
-        include_links=False,   # opcional
-        include_comments=False # opcional
+        include_links=False,  # opcional
+        include_comments=False,  # opcional
     )
     if text is None:
         return []
@@ -71,12 +71,14 @@ def load_document(url: Url) -> bool:
             docs = load_html(url.url)
         print(f"Loaded {len(docs)} documents from {url.url}.")
         print(f"Total characters: {len(docs[0].page_content)}")
-        # print(docs[0].page_content[:100])
-        text_splitter = RecursiveCharacterTextSplitter(
-            chunk_size=1000,  # chunk size (characters)
-            chunk_overlap=200,  # chunk overlap (characters)
-            add_start_index=True,  # track index in original document
+        text_splitter = RecursiveCharacterTextSplitter.from_tiktoken_encoder(
+            encoding_name="cl100k_base", chunk_size=1000, chunk_overlap=100
         )
+        # text_splitter = RecursiveCharacterTextSplitter(
+        #     chunk_size=1000,  # chunk size (characters)
+        #     chunk_overlap=200,  # chunk overlap (characters)
+        #     add_start_index=True,  # track index in original document
+        # )
         all_splits = list(map(trim_document, text_splitter.split_documents(docs)))
         print(f"Split into {len(all_splits)} chunks.")
         document_ids = vector_store.add_documents(all_splits)
@@ -89,7 +91,7 @@ def load_document(url: Url) -> bool:
         return False
 
 
-@safe_interrupt_loop # type: ignore
+@safe_interrupt_loop  # type: ignore
 def load_urls(should_stop: ShouldStopFn) -> None:
     with consumer as consumer_instance:
         while True:
@@ -104,8 +106,8 @@ def load_urls(should_stop: ShouldStopFn) -> None:
                     url_repository.update(url)
                 print(f"Consumed me ssage: {msg}")
             else:
-                print("No messages consumed.")  
-            
+                print("No messages consumed.")
+
             if should_stop():
                 print("Loop interrupted")
                 break

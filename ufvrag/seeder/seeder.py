@@ -1,6 +1,7 @@
-from ufvrag.config import create_urls_producer  # , create_urls_consumer
+from ufvrag.config import create_urls_producer
 
 producer = create_urls_producer()
+
 
 def seed_url(url: str) -> None:
     """

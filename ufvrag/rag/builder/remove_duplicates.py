@@ -1,9 +1,12 @@
 import os
+from typing import Any, Generator, Mapping
+
 import requests
 from dotenv import load_dotenv
-from typing import Mapping, Any, Generator
+
 from ufvrag.config.repository_config import url_collection
-from ufvrag.config.vector_store_config import create_client, create_vector_store
+from ufvrag.config.vector_store_config import (create_client,
+                                               create_vector_store)
 
 load_dotenv()
 

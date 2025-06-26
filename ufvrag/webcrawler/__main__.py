@@ -1,7 +1,9 @@
-from ufvrag.config.messenger_config import create_urls_producer, create_urls_consumer, create_embeddings_producer
+from ufvrag.config.messenger_config import (create_embeddings_producer,
+                                            create_urls_consumer,
+                                            create_urls_producer)
+from ufvrag.utils.interrupt import ShouldStopFn, safe_interrupt_loop
 
 from . import webcrawler
-from ufvrag.utils.interrupt import safe_interrupt_loop, ShouldStopFn
 
 consumer = create_urls_consumer()
 producer = create_urls_producer()
@@ -14,10 +16,12 @@ def process_messages(should_stop: ShouldStopFn) -> None:
         while True:
             msg = consumer_instante.consume(10)
             if msg:
-                #print(f"Consumed message: {msg}")
-                crawl_response = webcrawler.craw_url(url=msg)
+                # print(f"Consumed message: {msg}")
+                crawl_response = webcrawler.crawl_url(url=msg)
                 if crawl_response.url_for_embbeding is not None:
-                    print(f"\tUrl sent to embedding: {crawl_response.url_for_embbeding}")
+                    print(
+                        f"\tUrl sent to embedding: {crawl_response.url_for_embbeding}"
+                    )
                     embeddings_producer.produce(crawl_response.url_for_embbeding)
                     embeddings_producer.flush()
                 if crawl_response.links is not None:

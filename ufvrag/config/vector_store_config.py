@@ -1,9 +1,10 @@
 import os
+
 from dotenv import load_dotenv
 from langchain_core.vectorstores import VectorStore
 from langchain_qdrant import QdrantVectorStore
-
 from qdrant_client import QdrantClient
+
 from .embeddings_config import create_embeddings
 
 load_dotenv()

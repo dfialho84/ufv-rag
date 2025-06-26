@@ -1,12 +1,12 @@
 import time
 from types import TracebackType
-from typing import TypeVar, Optional, Type
-from confluent_kafka import (
-    Producer as KafkaProducerLib,
-    Consumer as KafkaConsumerLib,
-    Message as KafkaMessage,
-)
-from .base import Producer, MessageParser, ProducerCallback, Consumer
+from typing import Optional, Type, TypeVar
+
+from confluent_kafka import Consumer as KafkaConsumerLib
+from confluent_kafka import Message as KafkaMessage
+from confluent_kafka import Producer as KafkaProducerLib
+
+from .base import Consumer, MessageParser, Producer, ProducerCallback
 
 T = TypeVar("T")
 

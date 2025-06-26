@@ -1,13 +1,13 @@
 import json
+from typing import Annotated, Any, TypeAlias, TypedDict
+
 from dotenv import load_dotenv
-from typing import Annotated
-from typing import TypedDict, TypeAlias, Any
-from langgraph.graph import StateGraph, START, END
-from langgraph.graph.message import add_messages
 from langchain_core.messages import ToolMessage
 from langchain_core.tools import BaseTool
 from langchain_ollama import ChatOllama
 from langchain_tavily import TavilySearch
+from langgraph.graph import END, START, StateGraph
+from langgraph.graph.message import add_messages
 
 load_dotenv()
 

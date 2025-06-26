@@ -1,8 +1,11 @@
-from typing import Optional, Any, Iterable, Mapping, TypeGuard
 from dataclasses import asdict
-from ufvrag.models import Url
-from .base import UrlRepository
+from typing import Any, Iterable, Mapping, Optional, TypeGuard
+
 from pymongo.collection import Collection
+
+from ufvrag.models import Url
+
+from .base import UrlRepository
 
 
 def dict_to_url(d: Optional[Mapping[str, Any]]) -> Optional[Url]:

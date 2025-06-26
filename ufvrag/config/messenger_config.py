@@ -1,8 +1,11 @@
-from dotenv import load_dotenv
 import os
-from confluent_kafka import Producer as KafkaProducerLib, Consumer as KafkaConsumerLib
+
+from confluent_kafka import Consumer as KafkaConsumerLib
+from confluent_kafka import Producer as KafkaProducerLib
+from dotenv import load_dotenv
+
 from ufvrag.messenger.base import Consumer, Producer
-from ufvrag.messenger.kafka import KafkaProducer, KafkaConsumer
+from ufvrag.messenger.kafka import KafkaConsumer, KafkaProducer
 from ufvrag.messenger.parsers import UrlParser
 
 load_dotenv()
@@ -79,6 +82,7 @@ def create_embeddings_consumer() -> Consumer[str]:
     return KafkaConsumer[str](
         message_parser=url_parser, topic=topic, consumer=kafka_consumer
     )
+
 
 def create_embeddings_producer() -> Producer[str]:
     """
